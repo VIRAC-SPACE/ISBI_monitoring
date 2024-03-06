@@ -1,6 +1,7 @@
 import sys
 import os
 
+import argparse
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
@@ -27,12 +28,8 @@ def read_spectrum_file(spectrum_file):
     return velocity, amplitude
 
 
-def main():
-    font = {'family': 'normal',
+def main(source):
 
-            'size': 16}
-
-    matplotlib.rc('font', **font)
 
     data_path = "/home/janis/PycharmProjects/test/ToJanis/ToJanis/"
     spectrum_files = [file for file in os.listdir(data_path) if not file.startswith("contcurve_")]
@@ -113,5 +110,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='''Display Monitoring. ''', epilog="""plot monitoring.""")
+    parser.add_argument("source", help="Experiment source", type=str, default="")
+    parser.add_argument("-c", "--config", help="Configuration cfg file", type=str,
+                        default="config/config.cfg")
+    parser.add_argument("-v", "--version", action="version", version='%(prog)s - Version 1.0')
+    args = parser.parse_args()
+    main(args.source)
     sys.exit()

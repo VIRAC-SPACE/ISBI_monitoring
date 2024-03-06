@@ -20,6 +20,7 @@ def get_configs(section, key, config_file_path):
     config = ConfigParser(config_file_path)
     return config.get_config(section, key)
 
+
 def read_spectrum_file(spectrum_file):
     vel_rr = []
     vel_ll = []

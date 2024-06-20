@@ -1,6 +1,6 @@
 
 # Table of Contents
-- [Capabilities of MDPS](#capabilities-of-mdps)
+- [Capabilities of ISBI_monitoring](#capabilities)
 - [Dependencies](#dependencies)
 - [Changelog](#changelog)
 - [Getting Help](#getting-help)

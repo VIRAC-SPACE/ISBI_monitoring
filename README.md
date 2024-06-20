@@ -2,11 +2,6 @@
 # Table of Contents
 - [Capabilities of MDPS](#capabilities-of-mdps)
 - [Dependencies](#dependencies)
-- [Configuration of MDPS](#configuration-of-mdps)
-- [Directory structure](#directory-structure)
-- [Processing SDR output](#processing-sdr-output)
-- [Monitoring](#monitoring)
-- [Publication and presentation of observations](#publication-and-presentation-of-observations)
 - [Changelog](#changelog)
 - [Getting Help](#getting-help)
 - [Acknowledgements](#acknowledgements)

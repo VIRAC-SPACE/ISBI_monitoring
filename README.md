@@ -7,7 +7,7 @@
 - [Acknowledgements](#acknowledgements)
   
 ## Capabilities
-ISBI_monitoring is colection of python scripts to vizuliaze ISBI_pipeline (https://github.com/VIRAC-SPACE/ISBI_pipeline) output and create monitoring plot.
+ISBI_monitoring is collection of python scripts to vizuliaze ISBI_pipeline (https://github.com/VIRAC-SPACE/ISBI_pipeline) output and create monitoring plot.
 
 ## Dependencies
 - python 3
@@ -18,7 +18,7 @@ ISBI_monitoring is colection of python scripts to vizuliaze ISBI_pipeline (https
     
 | **Scripts** | **Description** |
 | --- | --- |
-| vlbi_spectra_plot.py | Single observation spectra ploting tool|
+| vlbi_spectra_plot.py | Single observation spectra plotting tool|
 | vlbi_monitoring.py | Display monitorig results|
 
 ## Changelog

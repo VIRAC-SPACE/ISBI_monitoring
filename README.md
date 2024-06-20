@@ -31,4 +31,4 @@ Bug reports, feature requests and make contributions (e.g. code patches) can be 
 ## Acknowledgements
 This software was written by Jānis Šteinbergs. If you make use of this software to get results that appear in a publication or presentation please include this acknowledgement: &quot;We have made use of ISBI_monitoring, a tool developed by Jānis Šteinbergs.&quot;
 
-This work was supported by Latvian Council of Science Project A single-baseline radio interferometer in a new age of transient astrophysics lzp-2022/1-0083
+This work was supported by Latvian Council of Science Project "A single-baseline radio interferometer in a new age of transient astrophysics" Nr.: lzp-2022/1-0083.

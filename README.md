@@ -19,7 +19,7 @@ ISBI_monitoring is collection of python scripts to vizuliaze ISBI_pipeline (http
 | **Scripts** | **Description** |
 | --- | --- |
 | vlbi_spectra_plot.py | Single observation spectra plotting tool|
-| vlbi_monitoring.py | Display monitorig results|
+| vlbi_monitoring.py | Display monitoring results|
 
 ## Changelog
 Version 1.0

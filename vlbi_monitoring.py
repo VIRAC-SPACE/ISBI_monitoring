@@ -13,33 +13,24 @@ from parsers.configparser_ import ConfigParser
 
 
 def read_spectrum_file(spectrum_file):
-    vel_rr = []
-    vel_ll = []
-    amp_rr = []
-    amp_ll = []
+    vel = []
+    amp = []
 
     with open(spectrum_file) as f:
         lines = f.readlines()
-        for index in range(0, len(lines)):
+        for index in range(14, len(lines)):
             line = lines[index]
             if "FLAGGED" in line:
                 continue
             else:
                 line = lines[index]
-                if "RR" in line or "LL" in line:
+                if "I" in line:
                     data_tmp = line.split()
                     data_tmp = [d.strip() for d in data_tmp]
+                    vel.append(data_tmp[4])
+                    amp.append(data_tmp[5])
 
-                    pol = data_tmp[2]
-                    if pol == "RR":
-                        vel_rr.append(data_tmp[4])
-                        amp_rr.append(data_tmp[5])
-                    elif pol == "LL":
-                        vel_ll.append(data_tmp[4])
-                        amp_ll.append(data_tmp[5])
-
-    return (np.array(vel_rr, dtype=float), np.array(vel_ll, dtype=float),
-            np.array(amp_rr, dtype=float), np.array(amp_ll, dtype=float))
+    return np.array(vel, dtype=float), np.array(amp, dtype=float)
 
 
 def get_date(spectrum_file):
@@ -71,9 +62,10 @@ def get_configs(section, key, config_file_path):
 
 def main(source, config, config_plot):
     plt.style.use(config_plot)
-    monitoring_path = get_configs("paths", "monitoring_path", config) + "/"
-    monitoring_files = [file for file in os.listdir(monitoring_path) if file.startswith(source)]
-    print(monitoring_files)
+    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/"
+    monitoring_files = [file for file in os.listdir(monitoring_path) ]
+    print("monitoring files:", monitoring_files)
+
     components = [float(component) for component in
                   get_configs("velocities", source.lower() + "_" + "6668", config).split(",")]
     amp_for_component = {component: [] for component in components}
@@ -86,21 +78,12 @@ def main(source, config, config_plot):
     ax = fig.add_subplot(1, 2, 1)
     ax2 = fig.add_subplot(1, 2, 2, projection='3d')
     for file in monitoring_files:
-        vel_rr, vel_ll, amp_rr, amp_ll = read_spectrum_file(monitoring_path + file)
-        if len(amp_rr) == len(amp_ll):
-            vel = (vel_rr + vel_ll)/2
-            amp = (amp_rr + amp_ll) / 2
-        elif len(amp_rr) > len(amp_ll):
-            vel = vel_rr
-            amp = amp_rr
-        else:
-            vel = vel_ll
-            amp = amp_ll
+        vel, amp = read_spectrum_file(monitoring_path + file)
+
         time = [mjd[monitoring_files.index(file)]] * len(vel)
         ax2.plot(time, vel, amp)
         for component in components:
             max_index = (np.abs(amp - component).argmin())
-            #print(max_index, component)
             max_indexs = range(max_index-3, max_index+3)
             max_amplitudes = []
             for index in max_indexs:
@@ -108,7 +91,6 @@ def main(source, config, config_plot):
             amp_for_component[component].append(np.max(max_amplitudes))
 
     for component in components:
-        #print(amp_for_component[component])
         ax.scatter(mjd, amp_for_component[component], label="Maser flux [Jy] vel: " + str(component) + " [KM/s]")
 
     '''
@@ -117,10 +99,10 @@ def main(source, config, config_plot):
     #ax2.zaxis._axinfo['label']['space_factor'] = 1000
     #ax2.dist = 10
     '''
-    ticks = ax.get_xticks()
-    print("ticks", ticks[6])
-    print("dates", dates)
-    print(len(dates), len(ticks))
+    #ticks = ax.get_xticks()
+    #print("ticks", ticks[6])
+    #print("dates", dates)
+    #print(len(dates), len(ticks))
     #ax2.set_xticks(ticks, dates)
     #ax2.set_xticklabels(datestmp)
     #ax.set_xticks(ticks, dates)
@@ -147,4 +129,4 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--version", action="version", version='%(prog)s - Version 1.0')
     args = parser.parse_args()
     main(args.source, args.config, args.config_plot)
-    sys.exit()
+    sys.exit(0)

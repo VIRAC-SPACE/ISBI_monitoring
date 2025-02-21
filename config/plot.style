@@ -5,4 +5,4 @@ ytick.major.size:12
 ytick.minor.size:12
 ytick.direction:in
 lines.linewidth:2
-lines.markersize:20
+lines.markersize:12

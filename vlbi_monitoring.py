@@ -83,15 +83,17 @@ def main(source, config, config_plot):
         time = [mjd[monitoring_files.index(file)]] * len(vel)
         ax2.plot(time, vel, amp)
         for component in components:
-            max_index = (np.abs(amp - component).argmin())
-            max_indexs = range(max_index-3, max_index+3)
+            max_index = (np.abs(vel - component).argmin())
+            max_indexs = range(max_index-1, max_index+1)
             max_amplitudes = []
             for index in max_indexs:
                 max_amplitudes.append(amp[index])
             amp_for_component[component].append(np.max(max_amplitudes))
+            #amp_for_component[component].append(amp[max_index])
 
     for component in components:
-        ax.scatter(mjd, amp_for_component[component], label="Maser flux [Jy] vel: " + str(component) + " [KM/s]")
+        #print(mjd, amp_for_component[component], str(component))
+        ax.scatter(mjd, amp_for_component[component], label="Maser flux [Jy] vel: " + str(component) + " [KM/s]",  alpha=0.9)
 
     '''
     #ax2.xaxis._axinfo['label']['space_factor'] = 1000

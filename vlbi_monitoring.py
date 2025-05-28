@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
+from datetime import datetime
 
 import argparse
 import matplotlib.pyplot as plt
-import matplotlib
 import numpy as np
 from astropy.time import Time
 
@@ -62,8 +62,8 @@ def get_configs(section, key, config_file_path):
 
 def main(source, config, config_plot):
     plt.style.use(config_plot)
-    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/"
-    monitoring_files = [file for file in os.listdir(monitoring_path) ]
+    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/line/"
+    monitoring_files = [file for file in os.listdir(monitoring_path)]
     print("monitoring files:", monitoring_files)
 
     components = [float(component) for component in
@@ -77,6 +77,17 @@ def main(source, config, config_plot):
     fig = plt.figure(figsize=(16, 16), dpi=100)
     ax = fig.add_subplot(1, 2, 1)
     ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+
+    contiuum_data = (get_configs("paths", "monitoring_path", config)
+                     + "/" + source + "/UVFIT_" + source + "_.txt")
+    dtype = np.dtype([("date", "S12"), ("amp", float), ("error", float)])
+    contiuum_date, contiuum_amp, contiuum_amp_error = np.loadtxt(contiuum_data,
+                                                                 usecols=(0, 2, 3), unpack=True, dtype=dtype)
+    contiuum_date = [str(date).replace("b", "").replace("'", "") for date in contiuum_date]
+    format = "%d-%b-%Y"
+    mjd = Time([datetime.strptime(date, format) for date in contiuum_date]).mjd
+    ax.scatter(mjd, contiuum_amp*1000, label="contiuum * 1000")
+
     for file in monitoring_files:
         vel, amp = read_spectrum_file(monitoring_path + file)
 
@@ -89,11 +100,26 @@ def main(source, config, config_plot):
             for index in max_indexs:
                 max_amplitudes.append(amp[index])
             amp_for_component[component].append(np.max(max_amplitudes))
-            #amp_for_component[component].append(amp[max_index])
+
+    ax2.scatter(mjd, [0]*len(mjd), contiuum_amp * 1000, label="contiuum * 1000")
 
     for component in components:
         #print(mjd, amp_for_component[component], str(component))
         ax.scatter(mjd, amp_for_component[component], label="Maser flux [Jy] vel: " + str(component) + " [KM/s]",  alpha=0.9)
+
+    fig3, ax3= plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
+    ax3.scatter(mjd, contiuum_amp)
+
+    for i in range(0, len(mjd)):
+        ax3.errorbar(mjd[i], contiuum_amp[i], yerr=contiuum_amp_error[i], fmt='', ecolor="r")
+
+    ax3.set_xlabel("MJD")
+    ax3.set_ylabel(r'$Flux~(\mathrm{Jy})$')
+
+    fig4, ax4 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
+    ax4.scatter(contiuum_amp, contiuum_amp_error)
+    ax4.set_xlabel("contiuum amp " + r'$Flux~(\mathrm{Jy})$')
+    ax4.set_ylabel('contiuum amp error ' + r'$Flux~(\mathrm{Jy})$')
 
     '''
     #ax2.xaxis._axinfo['label']['space_factor'] = 1000

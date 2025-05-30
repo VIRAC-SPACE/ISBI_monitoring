@@ -61,6 +61,20 @@ def main(sourcea, sourceb, config, config_plot):
 
     ax1.set_xlabel(sourcea + " " + r'$Flux~(\mathrm{Jy})$')
     ax1.set_ylabel(sourceb + " " + r'$Flux~(\mathrm{Jy})$')
+
+    fig2, ax2 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
+    ax2.scatter(mjd_a, contiuum_amp_a, label=sourcea)
+    ax2.scatter(mjd_b, contiuum_amp_b, label=sourceb)
+
+    for i in range(0, len(mjd_a)):
+        ax2.errorbar(mjd_a[i], contiuum_amp_a[i], yerr=contiuum_amp_error_a[i], fmt='', ecolor="r")
+
+    for j in range(0, len(mjd_b)):
+        ax2.errorbar(mjd_b[j], contiuum_amp_b[j], yerr=contiuum_amp_error_b[j], fmt='', ecolor="r")
+
+    ax2.set_xlabel("MJD")
+    ax2.set_ylabel(r'$Flux~(\mathrm{Jy})$')
+    ax2.legend()
     plt.show()
 
 if __name__ == "__main__":

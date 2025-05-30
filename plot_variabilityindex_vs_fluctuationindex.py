@@ -134,8 +134,6 @@ def main(config, config_plot):
             for file in monitoring_files:
                 vel, amp = read_spectrum_file(monitoring_path + file)
 
-                time = [mjd[monitoring_files.index(file)]] * len(vel)
-
                 for component in components:
                     max_index = (np.abs(vel - component).argmin())
                     max_indexs = range(max_index - 1, max_index + 1)

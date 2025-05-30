@@ -8,6 +8,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.time import Time
+from astropy.io import ascii
 
 from parsers.configparser_ import ConfigParser
 
@@ -63,20 +64,6 @@ def get_configs(section, key, config_file_path):
 def main(source, config, config_plot):
     plt.style.use(config_plot)
     monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/line/"
-    monitoring_files = [file for file in os.listdir(monitoring_path)]
-    print("monitoring files:", monitoring_files)
-
-    components = [float(component) for component in
-                  get_configs("velocities", source.lower() + "_" + "6668", config).split(",")]
-    amp_for_component = {component: [] for component in components}
-
-    dates = [get_date(monitoring_path + file) for file in monitoring_files]
-    dates = Time(dates, format='isot', scale='utc')
-    mjd = dates.mjd
-
-    fig = plt.figure(figsize=(16, 16), dpi=100)
-    ax = fig.add_subplot(1, 2, 1)
-    ax2 = fig.add_subplot(1, 2, 2, projection='3d')
 
     contiuum_data = (get_configs("paths", "monitoring_path", config)
                      + "/" + source + "/UVFIT_" + source + "_.txt")
@@ -85,33 +72,72 @@ def main(source, config, config_plot):
                                                                  usecols=(0, 2, 3), unpack=True, dtype=dtype)
     contiuum_date = [str(date).replace("b", "").replace("'", "") for date in contiuum_date]
     format = "%d-%b-%Y"
-    mjd = Time([datetime.strptime(date, format) for date in contiuum_date]).mjd
-    ax.scatter(mjd, contiuum_amp*1000, label="contiuum * 1000")
+    mjd_cont = Time([datetime.strptime(date, format) for date in contiuum_date]).mjd
 
-    for file in monitoring_files:
-        vel, amp = read_spectrum_file(monitoring_path + file)
+    if os.path.isdir(monitoring_path):
+        fig = plt.figure(figsize=(16, 16), dpi=100)
+        ax = fig.add_subplot(1, 2, 1)
+        ax2 = fig.add_subplot(1, 2, 2, projection='3d')
 
-        time = [mjd[monitoring_files.index(file)]] * len(vel)
-        ax2.plot(time, vel, amp)
+        monitoring_files = [file for file in os.listdir(monitoring_path)]
+        print("monitoring files:", monitoring_files)
+
+        components = [float(component) for component in
+                      get_configs("velocities", source.lower() + "_" + "6668", config).split(",")]
+        amp_for_component = {component: [] for component in components}
+
+        dates = [get_date(monitoring_path + file) for file in monitoring_files]
+        dates = Time(dates, format='isot', scale='utc')
+        mjd_line = dates.mjd
+
+        ax.scatter(mjd_cont, contiuum_amp*1000, label="contiuum * 1000")
+
+        sources_vrange = ascii.read('DB_vrange.csv')
+        source_vrange_index = sources_vrange['name'].tolist().index(source)
+        vmin = dict(sources_vrange)["vmin"][source_vrange_index]
+        vmax = dict(sources_vrange)["vmax"][source_vrange_index]
+        integrate_flux = []
+
+        for file in monitoring_files:
+            vel, amp = read_spectrum_file(monitoring_path + file)
+
+            vmin_index = (np.abs(vel - vmin)).argmin()
+            vmax_index = (np.abs(vel - vmax)).argmin()
+
+            integrate_flux.append(np.trapz(amp[vmin_index:vmax_index], vel[vmin_index:vmax_index]))
+
+            time = [mjd_line[monitoring_files.index(file)]] * len(vel)
+            ax2.plot(time, vel, amp)
+            for component in components:
+                max_index = (np.abs(vel - component).argmin())
+                max_indexs = range(max_index-1, max_index+1)
+                max_amplitudes = []
+                for index in max_indexs:
+                    max_amplitudes.append(amp[index])
+                amp_for_component[component].append(np.max(max_amplitudes))
+
         for component in components:
-            max_index = (np.abs(vel - component).argmin())
-            max_indexs = range(max_index-1, max_index+1)
-            max_amplitudes = []
-            for index in max_indexs:
-                max_amplitudes.append(amp[index])
-            amp_for_component[component].append(np.max(max_amplitudes))
+            ax.scatter(mjd_line, amp_for_component[component],
+                       label="Maser flux [Jy] vel: " + str(component) + " [KM/s]", alpha=0.9)
 
-    ax2.scatter(mjd, [0]*len(mjd), contiuum_amp * 1000, label="contiuum * 1000")
+        fig5, ax5 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
+        ax5.scatter(mjd_line, integrate_flux)
 
-    for component in components:
-        #print(mjd, amp_for_component[component], str(component))
-        ax.scatter(mjd, amp_for_component[component], label="Maser flux [Jy] vel: " + str(component) + " [KM/s]",  alpha=0.9)
+        ax2.scatter(mjd_cont, [0] * len(mjd_cont), contiuum_amp * 1000, label="contiuum * 1000")
+        ax2.set_xlabel("Observation dates", labelpad=14)
+        ax2.set_ylabel("Velocity [km/s]", labelpad=14)
+        ax2.set_zlabel("Flux [Jy]", labelpad=10)
+        ax2.grid(True)
+        ax.set_xlabel("Observation Date")
+        ax.set_ylabel("Flux [Jy]")
+        ax.grid(True)
+        ax.legend()
 
     fig3, ax3= plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
-    ax3.scatter(mjd, contiuum_amp)
+    ax3.scatter(mjd_cont, contiuum_amp)
 
-    for i in range(0, len(mjd)):
-        ax3.errorbar(mjd[i], contiuum_amp[i], yerr=contiuum_amp_error[i], fmt='', ecolor="r")
+    for i in range(0, len(mjd_cont)):
+        ax3.errorbar(mjd_cont[i], contiuum_amp[i], yerr=contiuum_amp_error[i], fmt='', ecolor="r")
 
     ax3.set_xlabel("MJD")
     ax3.set_ylabel(r'$Flux~(\mathrm{Jy})$')
@@ -121,29 +147,6 @@ def main(source, config, config_plot):
     ax4.set_xlabel("contiuum amp " + r'$Flux~(\mathrm{Jy})$')
     ax4.set_ylabel('contiuum amp error ' + r'$Flux~(\mathrm{Jy})$')
 
-    '''
-    #ax2.xaxis._axinfo['label']['space_factor'] = 1000
-    #ax2.yaxis._axinfo['label']['space_factor'] = 1000
-    #ax2.zaxis._axinfo['label']['space_factor'] = 1000
-    #ax2.dist = 10
-    '''
-    #ticks = ax.get_xticks()
-    #print("ticks", ticks[6])
-    #print("dates", dates)
-    #print(len(dates), len(ticks))
-    #ax2.set_xticks(ticks, dates)
-    #ax2.set_xticklabels(datestmp)
-    #ax.set_xticks(ticks, dates)
-    #ax.set_xticklabels(dates, rotation=30)
-
-    ax2.set_xlabel("Observation dates", labelpad=14)
-    ax2.set_ylabel("Velocity [km/s]", labelpad=14)
-    ax2.set_zlabel("Flux [Jy]", labelpad=10)
-    ax2.grid(True)
-    ax.set_xlabel("Observation Date")
-    ax.set_ylabel("Flux [Jy]")
-    ax.grid(True)
-    ax.legend()
     plt.show()
 
 

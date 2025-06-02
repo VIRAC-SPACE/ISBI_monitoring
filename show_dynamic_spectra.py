@@ -94,9 +94,13 @@ def get_max_min_velocity(vmin, vmax, pipeline_output_files, source, config):
 
 def main(source, config, config_plot):
     plt.style.use(config_plot)
+    result_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/results/"
     monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/line/"
     monitoring_files = [file for file in os.listdir(monitoring_path)]
     print("monitoring files:", monitoring_files)
+
+    if not os.path.isdir(result_path):
+        os.mkdir(result_path)
 
     sources_vrange = ascii.read('DB_vrange.csv')
     source_vrange_index = sources_vrange['name'].tolist().index(source)
@@ -136,7 +140,15 @@ def main(source, config, config_plot):
     ax2 = ax1.twinx()
     ax2.scatter(mjd, contiuum_amp, c="r")
 
-    plt.show()
+    top = 0.993
+    bottom = 0.115
+    left = 0.084
+    right = 1.0
+    hspace = 0.0
+    wspace = 0.0
+    plt.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
+    #plt.show()
+    plt.savefig(result_path + source.lower() + "_dynamic_spectra")
 
 
 if __name__ == "__main__":

@@ -63,7 +63,11 @@ def get_configs(section, key, config_file_path):
 
 def main(source, config, config_plot):
     plt.style.use(config_plot)
+    result_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/results/"
     monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/line/"
+
+    if not os.path.isdir(result_path):
+        os.mkdir(result_path)
 
     contiuum_data = (get_configs("paths", "monitoring_path", config)
                      + "/" + source + "/UVFIT_" + source + "_.txt")

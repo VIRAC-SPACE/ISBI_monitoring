@@ -63,20 +63,25 @@ def get_configs(section, key, config_file_path):
 
 def main(source, config, config_plot):
     plt.style.use(config_plot)
-    result_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/results/"
-    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/line/"
+    result_path = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/results/"
+    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/line/"
+
+    print("monitoring_path", monitoring_path)
 
     if not os.path.isdir(result_path):
-        os.mkdir(result_path)
+        os.system("mkdir -p " + result_path)
 
-    contiuum_data = (get_configs("paths", "monitoring_path", config)
-                     + "/" + source + "/UVFIT_" + source + "_.txt")
+    contiuum_data = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/UVFIT_" + source + "_.txt"
     dtype = np.dtype([("date", "S12"), ("amp", float), ("error", float)])
-    contiuum_date, contiuum_amp, contiuum_amp_error = np.loadtxt(contiuum_data,
-                                                                 usecols=(0, 2, 3), unpack=True, dtype=dtype)
-    contiuum_date = [str(date).replace("b", "").replace("'", "") for date in contiuum_date]
-    format = "%d-%b-%Y"
-    mjd_cont = Time([datetime.strptime(date, format) for date in contiuum_date]).mjd
+
+    print("contiuum_data", contiuum_data)
+
+    if os.path.isfile(contiuum_data):
+        contiuum_date, contiuum_amp, contiuum_amp_error = np.loadtxt(contiuum_data,
+                                                                     usecols=(0, 2, 3), unpack=True, dtype=dtype)
+        contiuum_date = [str(date).replace("b", "").replace("'", "") for date in contiuum_date]
+        format = "%d-%b-%Y"
+        mjd_cont = Time([datetime.strptime(date, format) for date in contiuum_date]).mjd
 
     if os.path.isdir(monitoring_path):
         fig = plt.figure(figsize=(16, 16), dpi=100)
@@ -94,10 +99,12 @@ def main(source, config, config_plot):
         dates = Time(dates, format='isot', scale='utc')
         mjd_line = dates.mjd
 
-        ax.scatter(mjd_cont, contiuum_amp*1000, label="contiuum * 1000")
+        if os.path.isfile(contiuum_data):
+            ax.scatter(mjd_cont, contiuum_amp*1000, label="contiuum * 1000")
+            ax2.scatter(mjd_cont, [0] * len(mjd_cont), contiuum_amp * 1000, label="contiuum * 1000")
 
         sources_vrange = ascii.read('DB_vrange.csv')
-        source_vrange_index = sources_vrange['name'].tolist().index(source)
+        source_vrange_index = sources_vrange['name'].tolist().index(source.upper())
         vmin = dict(sources_vrange)["vmin"][source_vrange_index]
         vmax = dict(sources_vrange)["vmax"][source_vrange_index]
         integrate_flux = []
@@ -108,7 +115,7 @@ def main(source, config, config_plot):
             vmin_index = (np.abs(vel - vmin)).argmin()
             vmax_index = (np.abs(vel - vmax)).argmin()
 
-            integrate_flux.append(np.trapz(amp[vmin_index:vmax_index], vel[vmin_index:vmax_index]))
+            integrate_flux.append(np.trapezoid(amp[vmin_index:vmax_index], vel[vmin_index:vmax_index]))
 
             time = [mjd_line[monitoring_files.index(file)]] * len(vel)
             ax2.plot(time, vel, amp)
@@ -127,7 +134,6 @@ def main(source, config, config_plot):
         fig5, ax5 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
         ax5.scatter(mjd_line, integrate_flux)
 
-        ax2.scatter(mjd_cont, [0] * len(mjd_cont), contiuum_amp * 1000, label="contiuum * 1000")
         ax2.set_xlabel("Observation dates", labelpad=14)
         ax2.set_ylabel("Velocity [km/s]", labelpad=14)
         ax2.set_zlabel("Flux [Jy]", labelpad=10)
@@ -137,21 +143,49 @@ def main(source, config, config_plot):
         ax.grid(True)
         ax.legend()
 
-    fig3, ax3= plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
-    ax3.scatter(mjd_cont, contiuum_amp)
+        top = 0.998
+        bottom = 0.075
+        left = 0.064
+        right = 0.98
+        hspace = 0.0
+        wspace = 0.0
+        fig.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
+        fig.savefig(result_path + source.lower() + "_timeseries_and_3D_plot", format="png")
 
-    for i in range(0, len(mjd_cont)):
-        ax3.errorbar(mjd_cont[i], contiuum_amp[i], yerr=contiuum_amp_error[i], fmt='', ecolor="r")
+    if os.path.isfile(contiuum_data):
+        fig3, ax3= plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
+        ax3.scatter(mjd_cont, contiuum_amp)
 
-    ax3.set_xlabel("MJD")
-    ax3.set_ylabel(r'$Flux~(\mathrm{Jy})$')
+        for i in range(0, len(mjd_cont)):
+            ax3.errorbar(mjd_cont[i], contiuum_amp[i], yerr=contiuum_amp_error[i], fmt='', ecolor="r")
 
-    fig4, ax4 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
-    ax4.scatter(contiuum_amp, contiuum_amp_error)
-    ax4.set_xlabel("contiuum amp " + r'$Flux~(\mathrm{Jy})$')
-    ax4.set_ylabel('contiuum amp error ' + r'$Flux~(\mathrm{Jy})$')
+        ax3.set_xlabel("MJD")
+        ax3.set_ylabel(r'$Flux~(\mathrm{Jy})$')
 
-    plt.show()
+        top = 0.993
+        bottom = 0.12
+        left = 0.069
+        right = 0.995
+        hspace = 0.0
+        wspace = 0.0
+        fig3.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
+        fig3.savefig(result_path + source.lower() + "_cont_flux_vs_time", format="png")
+
+        fig4, ax4 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
+        ax4.scatter(contiuum_amp, contiuum_amp_error)
+        ax4.set_xlabel("contiuum amp " + r'$Flux~(\mathrm{Jy})$')
+        ax4.set_ylabel('contiuum amp error ' + r'$Flux~(\mathrm{Jy})$')
+
+        top = 0.993
+        bottom = 0.12
+        left = 0.084
+        right = 0.995
+        hspace = 0.0
+        wspace = 0.0
+        fig4.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
+        fig4.savefig(result_path + source.lower() + "_cont_error_vs_flux", format="png")
+
+    #plt.show()
 
 
 if __name__ == "__main__":

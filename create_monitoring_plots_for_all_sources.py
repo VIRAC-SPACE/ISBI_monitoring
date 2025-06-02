@@ -29,8 +29,13 @@ def main(config):
     all_sources = [s.split("_")[0] for s in list(get_configs_items("velocities", config).keys())]
 
     for source in all_sources:
-        os.system("python3 vlbi_monitoring.py " + source)
-        os.system("python3 show_dynamic_spectra.py " + source)
+        print("Processing source " + source)
+        print("python3.12 vlbi_monitoring.py " + source)
+        os.system("python3.12 vlbi_monitoring.py " + source)
+        print("python3.12 show_dynamic_spectra.py " + source)
+        os.system("python3.12 show_dynamic_spectra.py " + source)
+
+        print("\n\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='''all monitoring results''',

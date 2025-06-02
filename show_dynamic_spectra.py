@@ -68,7 +68,7 @@ def get_max_min_velocity(vmin, vmax, pipeline_output_files, source, config):
     observed_flux = []
     observed_time = []
 
-    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/line/"
+    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/line/"
     for file in pipeline_output_files:
         velocity, amplitude = read_spectrum_file(monitoring_path + file)
         max_velocitys.append(max(velocity))
@@ -94,61 +94,65 @@ def get_max_min_velocity(vmin, vmax, pipeline_output_files, source, config):
 
 def main(source, config, config_plot):
     plt.style.use(config_plot)
-    result_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/results/"
-    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source + "/line/"
-    monitoring_files = [file for file in os.listdir(monitoring_path)]
-    print("monitoring files:", monitoring_files)
+    result_path = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/results/"
+    monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/line/"
 
-    if not os.path.isdir(result_path):
-        os.mkdir(result_path)
+    if os.path.isdir(monitoring_path):
+        monitoring_files = [file for file in os.listdir(monitoring_path)]
+        print("monitoring files:", monitoring_files)
 
-    sources_vrange = ascii.read('DB_vrange.csv')
-    source_vrange_index = sources_vrange['name'].tolist().index(source)
-    vmin = dict(sources_vrange)["vmin"][source_vrange_index]
-    vmax = dict(sources_vrange)["vmax"][source_vrange_index]
+        if not os.path.isdir(result_path):
+            os.system("mkdir -p " + result_path)
 
-    if vmin is None or vmax is None:
-        vmin, vmax, velocity, observed_flux, observed_time = get_max_min_velocity(vmin, vmax, monitoring_files, source, config)
+        sources_vrange = ascii.read('DB_vrange.csv')
+        source_vrange_index = sources_vrange['name'].tolist().index(source.upper())
+        vmin = dict(sources_vrange)["vmin"][source_vrange_index]
+        vmax = dict(sources_vrange)["vmax"][source_vrange_index]
 
-    else:
-        _, _, velocity, observed_flux, observed_time = get_max_min_velocity(vmin, vmax, monitoring_files, source, config)
+        if vmin is None or vmax is None:
+            vmin, vmax, velocity, observed_flux, observed_time = get_max_min_velocity(vmin, vmax, monitoring_files, source, config)
 
-    observed_flux = list((np.array(observed_flux).clip(min=1.5)))
-    triang = mtri.Triangulation(observed_time, velocity)
+        else:
+            _, _, velocity, observed_flux, observed_time = get_max_min_velocity(vmin, vmax, monitoring_files, source, config)
 
-    fig1, ax1 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
-    lvls = np.linspace(int(np.min(observed_flux)), int(np.max(observed_flux)), 1000)
+        observed_flux = list((np.array(observed_flux).clip(min=1.5)))
+        triang = mtri.Triangulation(observed_time, velocity)
 
-    cs = ax1.tricontourf(triang, observed_flux, levels=lvls, antialiased=False, locator=ticker.LogLocator, cmap="jet")
+        fig1, ax1 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
+        lvls = np.linspace(int(np.min(observed_flux)), int(np.max(observed_flux)), 1000)
 
-    cs.set_clim(vmin=1.5)
-    cbar = plt.colorbar(cs, spacing="proportional", label=r'$Flux~(\mathrm{Jy})$', extendrect=False)
-    cbar.locator = ticker.LogLocator()
+        cs = ax1.tricontourf(triang, observed_flux, levels=lvls, antialiased=False, locator=ticker.LogLocator, cmap="jet")
 
-    ax1.set_ylabel('Velocity (km sec$^{-1}$)')
-    ax1.set_xlabel("MJD")
+        cs.set_clim(vmin=1.5)
+        cbar = plt.colorbar(cs, spacing="proportional", label=r'$Flux~(\mathrm{Jy})$', extendrect=False)
+        cbar.locator = ticker.LogLocator()
 
-    contiuum_data = (get_configs("paths", "monitoring_path", config)
-                     + "/" + source + "/UVFIT_" + source + "_.txt")
-    dtype=np.dtype([("date", "S12"), ("amp", float), ("error", float)])
-    contiuum_date, contiuum_amp, contiuum_amp_error = np.loadtxt(contiuum_data,
-                                                                 usecols=(0, 2, 3), unpack=True, dtype=dtype)
-    contiuum_date = [str(date).replace("b", "").replace("'", "") for date in contiuum_date]
-    format = "%d-%b-%Y"
-    mjd = Time([datetime.strptime(date, format) for date in contiuum_date]).mjd
+        ax1.set_ylabel('Velocity (km sec$^{-1}$)')
+        ax1.set_xlabel("MJD")
 
-    ax2 = ax1.twinx()
-    ax2.scatter(mjd, contiuum_amp, c="r")
+        contiuum_data = (get_configs("paths", "monitoring_path", config)
+                         + "/" + source + "/UVFIT_" + source.upper() + "_.txt")
 
-    top = 0.993
-    bottom = 0.115
-    left = 0.084
-    right = 1.0
-    hspace = 0.0
-    wspace = 0.0
-    plt.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
-    #plt.show()
-    plt.savefig(result_path + source.lower() + "_dynamic_spectra")
+        if os.path.isfile(contiuum_data):
+            dtype=np.dtype([("date", "S12"), ("amp", float), ("error", float)])
+            contiuum_date, contiuum_amp, contiuum_amp_error = np.loadtxt(contiuum_data,
+                                                                         usecols=(0, 2, 3), unpack=True, dtype=dtype)
+            contiuum_date = [str(date).replace("b", "").replace("'", "") for date in contiuum_date]
+            format = "%d-%b-%Y"
+            mjd = Time([datetime.strptime(date, format) for date in contiuum_date]).mjd
+
+            ax2 = ax1.twinx()
+            ax2.scatter(mjd, contiuum_amp, c="r")
+
+        top = 0.993
+        bottom = 0.115
+        left = 0.084
+        right = 1.0
+        hspace = 0.0
+        wspace = 0.0
+        plt.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
+        #plt.show()
+        plt.savefig(result_path + source.lower() + "_dynamic_spectra", format="png")
 
 
 if __name__ == "__main__":

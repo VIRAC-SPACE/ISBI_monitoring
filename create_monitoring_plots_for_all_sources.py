@@ -28,12 +28,16 @@ def get_configs_items(section, config_file_path):
 def main(config):
     all_sources = [s.split("_")[0] for s in list(get_configs_items("velocities", config).keys())]
 
+    print(all_sources)
+
     for source in all_sources:
         print("Processing source " + source)
-        print("python3.12 vlbi_monitoring.py " + source)
-        os.system("python3.12 vlbi_monitoring.py " + source)
-        print("python3.12 show_dynamic_spectra.py " + source)
-        os.system("python3.12 show_dynamic_spectra.py " + source)
+
+        print("python3.12 show_dynamic_spectra.py " + source.upper())
+        os.system("python3.12 show_dynamic_spectra.py " + source.upper())
+
+        print("python3.12 vlbi_monitoring.py " + source.upper())
+        os.system("python3.12 vlbi_monitoring.py " + source.upper())
 
         print("\n\n")
 

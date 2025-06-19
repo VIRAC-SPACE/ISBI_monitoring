@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy.time import Time
 from astropy.io import ascii
+from scipy.stats import linregress
 
 from parsers.configparser_ import ConfigParser
 
@@ -71,12 +72,13 @@ def main(source, config, config_plot):
     if not os.path.isdir(result_path):
         os.system("mkdir -p " + result_path)
 
-    contiuum_data = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/UVFIT_" + source + "_.txt"
+    contiuum_data = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/UVFIT_" + source.upper() + ".txt"
+    print(contiuum_data)
     dtype = np.dtype([("date", "S12"), ("amp", float), ("error", float)])
-
     print("contiuum_data", contiuum_data)
 
     if os.path.isfile(contiuum_data):
+        print("yes")
         contiuum_date, contiuum_amp, contiuum_amp_error = np.loadtxt(contiuum_data,
                                                                      usecols=(0, 2, 3), unpack=True, dtype=dtype)
         contiuum_date = [str(date).replace("b", "").replace("'", "") for date in contiuum_date]
@@ -88,34 +90,30 @@ def main(source, config, config_plot):
         ax = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2, projection='3d')
 
-        monitoring_files = [file for file in os.listdir(monitoring_path)]
+        monitoring_files = [file for file in os.listdir(monitoring_path) if file.endswith("X.txt")]
         print("monitoring files:", monitoring_files)
 
-        components = [float(component) for component in
-                      get_configs("velocities", source.lower() + "_" + "6668", config).split(",")]
+        components = sorted([float(component) for component in
+                      get_configs("velocities", source.lower() + "_" + "6668", config).split(",")])
+
         amp_for_component = {component: [] for component in components}
 
         dates = [get_date(monitoring_path + file) for file in monitoring_files]
         dates = Time(dates, format='isot', scale='utc')
         mjd_line = dates.mjd
 
-        if os.path.isfile(contiuum_data):
-            ax.scatter(mjd_cont, contiuum_amp*1000, label="contiuum * 1000")
-            ax2.scatter(mjd_cont, [0] * len(mjd_cont), contiuum_amp * 1000, label="contiuum * 1000")
-
-        sources_vrange = ascii.read('DB_vrange.csv')
-        source_vrange_index = sources_vrange['name'].tolist().index(source.upper())
-        vmin = dict(sources_vrange)["vmin"][source_vrange_index]
-        vmax = dict(sources_vrange)["vmax"][source_vrange_index]
+        vmin = np.min(components) -2
+        vmax = np.max(components) +2
         integrate_flux = []
 
         for file in monitoring_files:
             vel, amp = read_spectrum_file(monitoring_path + file)
 
-            vmin_index = (np.abs(vel - vmin)).argmin()
-            vmax_index = (np.abs(vel - vmax)).argmin()
+            v_index = [(np.abs(vel - vmin)).argmin(), (np.abs(vel - vmax)).argmin()]
+            vmin_index = np.min(v_index)
+            vmax_index = np.max(v_index)
 
-            integrate_flux.append(np.trapezoid(amp[vmin_index:vmax_index], vel[vmin_index:vmax_index]))
+            integrate_flux.append(np.trapezoid(amp[vmin_index:vmax_index]))
 
             time = [mjd_line[monitoring_files.index(file)]] * len(vel)
             ax2.plot(time, vel, amp)
@@ -127,12 +125,46 @@ def main(source, config, config_plot):
                     max_amplitudes.append(amp[index])
                 amp_for_component[component].append(np.max(max_amplitudes))
 
+        if os.path.isfile(contiuum_data):
+            ax.scatter(mjd_cont, contiuum_amp*1000, label="contiuum * 1000")
+            ax2.scatter(mjd_cont, [0] * len(mjd_cont), contiuum_amp * 1000, label="contiuum * 1000")
+
+            if len(integrate_flux) == len(contiuum_amp):
+                fig6, ax6 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
+                ax6.scatter(integrate_flux, contiuum_amp)
+                coef = linregress(integrate_flux, contiuum_amp)
+                ax6.plot(integrate_flux, np.array(integrate_flux) * coef.slope + coef.intercept, '--k')
+
+                ax6.set_xlabel("Maser integrated flux")
+                ax6.set_ylabel("Contiuum flux")
+
+                top = 0.983
+                bottom = 0.125
+                left = 0.047
+                right = 0.984
+                hspace = 0.2
+                wspace = 0.2
+
+                fig6.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
+                fig6.savefig(result_path + source.lower() + "_maser_integrated_flux_vs_contiuum_flux", format="png")
+
         for component in components:
             ax.scatter(mjd_line, amp_for_component[component],
                        label="Maser flux [Jy] vel: " + str(component) + " [KM/s]", alpha=0.9)
 
         fig5, ax5 = plt.subplots(nrows=1, ncols=1, figsize=(16, 16), dpi=150)
         ax5.scatter(mjd_line, integrate_flux)
+        ax5.set_xlabel("Observation dates", labelpad=14)
+        ax5.set_ylabel("Integrated Maser flux [Jy]", labelpad=14)
+
+        top = 0.993
+        bottom = 0.14
+        left = 0.114
+        right = 0.985
+        hspace = 0.0
+        wspace = 0.0
+        fig5.subplots_adjust(top=top, bottom=bottom, left=left, right=right, hspace=hspace, wspace=wspace)
+        fig5.savefig(result_path + source.lower() + "_integrated_maser_flux", format="png")
 
         ax2.set_xlabel("Observation dates", labelpad=14)
         ax2.set_ylabel("Velocity [km/s]", labelpad=14)

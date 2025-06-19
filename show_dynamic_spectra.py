@@ -98,7 +98,7 @@ def main(source, config, config_plot):
     monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/line/"
 
     if os.path.isdir(monitoring_path):
-        monitoring_files = [file for file in os.listdir(monitoring_path)]
+        monitoring_files = [file for file in os.listdir(monitoring_path) if file.endswith("X.txt")]
         print("monitoring files:", monitoring_files)
 
         if not os.path.isdir(result_path):
@@ -131,9 +131,10 @@ def main(source, config, config_plot):
         ax1.set_xlabel("MJD")
 
         contiuum_data = (get_configs("paths", "monitoring_path", config)
-                         + "/" + source + "/UVFIT_" + source.upper() + "_.txt")
+                         + "/" + source + "/UVFIT_" + source.upper() + ".txt")
 
         if os.path.isfile(contiuum_data):
+            print("yes")
             dtype=np.dtype([("date", "S12"), ("amp", float), ("error", float)])
             contiuum_date, contiuum_amp, contiuum_amp_error = np.loadtxt(contiuum_data,
                                                                          usecols=(0, 2, 3), unpack=True, dtype=dtype)

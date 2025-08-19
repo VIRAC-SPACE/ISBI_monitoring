@@ -64,6 +64,15 @@ def read_spectrum_file(spectrum_file):
 
     return np.array(vel, dtype=float), np.array(amp, dtype=float)
 
+def compute_rms(amp):
+    N = len(amp)
+    ms = 0
+    for i in range(0, N):
+        ms = ms + amp[i] ** 2
+
+    ms = ms / N
+    rms = np.sqrt(ms)
+    return rms
 
 def main(config, config_plot):
     plt.style.use(config_plot)
@@ -83,7 +92,6 @@ def main(config, config_plot):
         if  not os.path.isdir(source_dir):
             continue
 
-        print(source_dir)
         cont_data = source_dir + "UVFIT_" + source.upper() + "_.txt"
         line_data = source_dir + "line/"
 
@@ -100,11 +108,8 @@ def main(config, config_plot):
             x = mjd
             y = contiuum_amp
             N = len(contiuum_amp)
-            rms = contiuum_amp_error
-            error = []
 
-            for i in range(0, len(y)):
-                error.append(2 * rms[i] + y[i] * 0.05)
+            error = contiuum_amp_error
 
             variability_index = ((np.max(y) - error[list(y).index(np.max(y))]) - (
                     np.min(y) + error[list(y).index(np.min(y))])) \
@@ -122,17 +127,32 @@ def main(config, config_plot):
             variability_indexes.append(np.float64(variability_index))
             fluctuation_indexes.append(np.float64(fluctuation_index))
 
+            print(source, variability_index, fluctuation_index)
+
         if len(os.listdir(line_data)) > 0:
             print("Process line data for source " + source.upper())
             monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/line/"
             monitoring_files = [file for file in os.listdir(monitoring_path)]
 
-            components = [float(component) for component in
-                          get_configs("velocities", source.lower() + "_" + "6668", config).split(",")]
+            components = sorted([float(component) for component in
+                          get_configs("velocities", source.lower() + "_" + "6668", config).split(",")])
 
             amp_for_component = {component: [] for component in components}
+            error_for_component = {component: [] for component in components}
             for file in monitoring_files:
                 vel, amp = read_spectrum_file(monitoring_path + file)
+
+                max_index = (np.abs(vel - np.min(components)).argmin()) +10
+                min_index = (np.abs(vel - np.max(components)).argmin()) -10
+
+                amp_tmp = []
+                amp_tmp.extend(amp[0:min_index])
+                amp_tmp.extend(amp[max_index:-1])
+                rms = compute_rms(amp_tmp)
+
+                error = []
+                for i in range(0, len(amp)):
+                    error.append(2 * rms + amp[i] * 0.05)
 
                 for component in components:
                     max_index = (np.abs(vel - component).argmin())
@@ -142,22 +162,14 @@ def main(config, config_plot):
                         max_amplitudes.append(amp[index])
 
                     amp_for_component[component].append(np.max(max_amplitudes))
+                    error_for_component[component].append(error[max_index])
 
             for component in components:
                 titles.append(source + "_" + str(component))
                 y = amp_for_component[component]
                 N = len(y)
 
-                ms = 0
-                for i in range(0, N):
-                    ms = ms + y[i] ** 2
-
-                ms = ms / N
-                rms = np.sqrt(ms)
-
-                error = []
-                for i in range(0, len(y)):
-                    error.append(2 * rms + y[i] * 0.05)
+                error = error_for_component[component]
 
                 variability_index = ((np.max(y) - error[list(y).index(np.max(y))]) - (
                         np.min(y) + error[list(y).index(np.min(y))])) \
@@ -175,11 +187,14 @@ def main(config, config_plot):
                 variability_indexes.append(np.float64(variability_index))
                 fluctuation_indexes.append(np.float64(fluctuation_index))
 
+                print(source, component, variability_index, fluctuation_index)
+
 
     scatter = plt.scatter(variability_indexes, fluctuation_indexes, alpha=0.3)
     for plot in range(0, len(titles)):
-        print(plot, titles[plot])
-        plt.text(variability_indexes[plot], fluctuation_indexes[plot], titles[plot])
+        if np.abs(variability_indexes[plot]) > 5:
+            plt.text(variability_indexes[plot], fluctuation_indexes[plot], titles[plot])
+
     coef = linregress(variability_indexes, fluctuation_indexes)
     plt.plot(variability_indexes, np.array(variability_indexes) * coef.slope + coef.intercept, '--k')
     pprint.pprint(coef, indent=4)

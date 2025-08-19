@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
+import os
 import sys
 
 import argparse
@@ -43,8 +44,16 @@ def read_spectrum_file(spectrum_file):
 
 def main(source_name, obs_name, config, config_plot):
     plt.style.use(config_plot)
+    print("obs_name:", obs_name)
     monitoring_path = get_configs("paths", "monitoring_path", config) + "/"
-    file = monitoring_path + "/" + source_name + "/" + obs_name + "_" +  source_name + ".txt"
+
+    monitoring_file_name = [f for f in os.listdir(monitoring_path + "/" + source_name + "/line/") if f.startswith(obs_name.upper()) and f.endswith("X.txt")]
+    if len(monitoring_file_name) == 0:
+        print("No such observation")
+        sys.exit()
+
+    file = monitoring_path + "/" + source_name + "/line/" + monitoring_file_name[0]
+    print("file:", file)
 
     spectrum = read_spectrum_file(file)
     plt.plot(spectrum[0], spectrum[1], label=source_name + "_" + obs_name)

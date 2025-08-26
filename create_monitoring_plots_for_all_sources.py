@@ -33,11 +33,11 @@ def main(config):
     for source in all_sources:
         print("Processing source " + source)
 
-        print("python3.12 show_dynamic_spectra.py " + source.upper())
-        os.system("python3.12 show_dynamic_spectra.py " + source.upper())
+        print("python3.8 show_dynamic_spectra.py " + source.upper())
+        os.system("python3.8 show_dynamic_spectra.py " + source.upper())
 
-        print("python3.12 vlbi_monitoring.py " + source.upper())
-        os.system("python3.12 vlbi_monitoring.py " + source.upper())
+        print("python3.8 vlbi_monitoring.py " + source.upper())
+        os.system("python3.8 vlbi_monitoring.py " + source.upper())
 
         print("\n\n")
 

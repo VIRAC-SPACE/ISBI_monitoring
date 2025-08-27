@@ -84,19 +84,25 @@ def main(config, config_plot):
     titles = []
 
     all_sources = [s.split("_")[0] for s in list(get_configs_items("velocities", config).keys())]
-    print(all_sources)
+    print("all sources", all_sources)
+
+    bad_sources = ["g32.744-0.076"]
+    print("bad sources", bad_sources)
 
     for source in all_sources:
+        if source in bad_sources:
+            continue
+
         source_dir = get_configs("paths", "monitoring_path", config)+ "/" + source.upper() + "/"
 
         if  not os.path.isdir(source_dir):
             continue
 
-        cont_data = source_dir + "UVFIT_" + source.upper() + "_.txt"
+        cont_data = source_dir + "UVFIT_" + source.upper() + ".txt"
         line_data = source_dir + "line/"
 
         if os.path.isfile(cont_data):
-            print("Process cont data for source " + source.upper())
+            #print("Process cont data for source " + source.upper())
             titles.append(source + "_cont")
 
             contiuum_date, contiuum_amp, contiuum_amp_error = np.loadtxt(cont_data,
@@ -127,10 +133,11 @@ def main(config, config_plot):
             variability_indexes.append(np.float64(variability_index))
             fluctuation_indexes.append(np.float64(fluctuation_index))
 
-            print(source, variability_index, fluctuation_index)
+            print(source + "\_cont" + " & {:.3f} & {:.3f} \\\\ ".
+                  format(variability_index, fluctuation_index))
 
         if len(os.listdir(line_data)) > 0:
-            print("Process line data for source " + source.upper())
+            #print("Process line data for source " + source.upper())
             monitoring_path = get_configs("paths", "monitoring_path", config) + "/" + source.upper() + "/line/"
             monitoring_files = [file for file in os.listdir(monitoring_path)]
 
@@ -187,8 +194,8 @@ def main(config, config_plot):
                 variability_indexes.append(np.float64(variability_index))
                 fluctuation_indexes.append(np.float64(fluctuation_index))
 
-                print(source, component, variability_index, fluctuation_index)
-
+                print(source + "\_" + str(component) + " & {:.3f} &  {:.3f} \\\\".
+                      format(variability_index, fluctuation_index))
 
     scatter = plt.scatter(variability_indexes, fluctuation_indexes, alpha=0.3)
     for plot in range(0, len(titles)):
